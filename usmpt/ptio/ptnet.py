@@ -159,19 +159,16 @@ class PetriNet:
     # TODO: Sect. 2.3.1. #
     ######################
     def smtlib_set_initial_marking(self, k: Optional[int] = None) -> str:
-        """ Set the initial marking.
         
-        Parameters
-        ----------
-        k : int, optional
-            Order.
-
-        Returns
-        -------
-        str
-            SMT-LIB format.
-        """
-        raise NotImplementedError
+        smt_input = ""
+        for place, token in self.initial_marking.items():
+            if k is None:
+                var = place
+            else:
+                var = "{}@{}".format(place, k)
+            smt_input += "(assert (= {} {}))\n".format(var, token)
+        
+        return smt_input
     ######################
 
     ######################
@@ -190,7 +187,33 @@ class PetriNet:
         str
             SMT-LIB format.
         """
-        raise NotImplementedError
+        def enbl(transition):
+
+            enbl = "(and\n"
+            for pl in self.places:                
+                enbl += f"\t(>= {pl}@{k} {self.pre[transition].get(pl,0)})\n"
+            enbl += ")"
+            return enbl
+        
+        def delta(transition):
+
+            cons = []
+            for pl in self.places:
+                pre_weight = self.pre[transition].get(pl, 0)
+                post_weight = self.post[transition].get(pl, 0)
+                var_k = f"{pl}@{k}"
+                var_k_prime = f"{pl}@{k_prime}"
+                cons.append(f"(= {var_k_prime} (- (+ {var_k} {post_weight}) {pre_weight}))")
+                delta = f"(and\n\t {'\n\t'.join(cons)})\n"
+            return delta
+        
+        t = []
+        for transition in self.transitions:
+            ENBL = enbl(transition)
+            DELTA = delta(transition)
+            t.append(f"(and\n\t{ENBL}\n\t{DELTA}\n)")
+        return f"(or\n\t {' '.join(t)}\n)"
+
     ######################
 
     def parse_net(self, filename: str) -> None:
