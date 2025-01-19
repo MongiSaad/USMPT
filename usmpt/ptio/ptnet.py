@@ -189,14 +189,13 @@ class PetriNet:
         """
         def enbl(transition):
 
-            enbl = "(and\n"
+            enbl = "(and\n\t"
             for pl in self.places:                
-                enbl += f"\t(>= {pl}@{k} {self.pre[transition].get(pl,0)})\n"
-            enbl += ")"
+                enbl += f"(>= {pl}@{k} {self.pre[transition].get(pl,0)})"
+            enbl += "\n\t)"
             return enbl
         
         def delta(transition):
-
             cons = []
             for pl in self.places:
                 pre_weight = self.pre[transition].get(pl, 0)
@@ -204,15 +203,17 @@ class PetriNet:
                 var_k = f"{pl}@{k}"
                 var_k_prime = f"{pl}@{k_prime}"
                 cons.append(f"(= {var_k_prime} (- (+ {var_k} {post_weight}) {pre_weight}))")
-                delta = f"(and\n\t {'\n\t'.join(cons)})\n"
+            delta = f"(and\n\t {'\n\t'.join(cons)})\n"
             return delta
         
         t = []
         for transition in self.transitions:
             ENBL = enbl(transition)
             DELTA = delta(transition)
-            t.append(f"(and\n\t{ENBL}\n\t{DELTA}\n)")
-        return f"(or\n\t {' '.join(t)}\n)"
+            t.append(f"(and {ENBL} {DELTA})")
+        smt_code = f"(assert (or\n\t{' '.join(t)}\n\t))\n"
+    
+        return smt_code
 
     ######################
 
