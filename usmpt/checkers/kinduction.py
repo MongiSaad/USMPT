@@ -122,5 +122,24 @@ class KInduction(AbstractChecker):
         int
             Iteration number of the unsat query.
         """
-        raise NotImplementedError
+        k = 0
+        k_induction_iteration = float('inf')
+
+        while True:
+            self.solver.push()
+
+            self.solver.write(self.ptnet.smtlib_declare_places(k))
+
+            if k > 0:
+                self.solver.write(self.ptnet.smtlib_transition_relation(k-1,k))
+            
+            self.solver.write(self.formula.smtlib(k, assertion=True))
+
+            if self.solver.check_sat():
+                self.solver.pop()
+                return k
+            else:
+                self.solver.pop()
+                k = k+1
+            
     ######################
